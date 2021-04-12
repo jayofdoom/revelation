@@ -1,11 +1,11 @@
 #
-# Revelation - a password manager for GNOME 2
-# http://oss.codepoet.no/revelation/
-# $Id$
+# Revelation - a password manager for GNOME
+# https://github.com/mikelolasagasti/revelation/
 #
 # Module for exporting to XHTML files
 #
 #
+# Copyright (c) 2021 Mikel Olasagasti Uranga <mikel@olasagasti.info>
 # Copyright (c) 2003-2006 Erik Grinaker
 #
 # This program is free software; you can redistribute it and/or
@@ -23,11 +23,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-from . import base
-from revelation import config, entry
-
 import gettext
 import time
+
+from revelation import config, entry
+from . import base
 
 _ = gettext.gettext
 
@@ -304,43 +304,43 @@ class XHTML(base.DataHandler):
 
         return css
 
-    def __generate_entry(self, entrystore, iter, depth = 0):
+    def __generate_entry(self, entrystore, child_iter, depth = 0):
         "Generates xhtml for an entry"
 
         tabs = "\t" * (depth + 2)
-        e = entrystore.get_entry(iter)
+        child_entry = entrystore.get_entry(child_iter)
 
-        if e is not None:
-            e.path = self.__get_entryid(entrystore, iter)
+        if child_entry is not None:
+            child_entry.path = self.__get_entryid(entrystore, child_iter)
 
         xhtml = ""
 
-        if e is None:
+        if child_entry is None:
 
             xhtml += "<div id=\"content\">\n"
             xhtml += "  <ul id=\"entrylist\">\n"
 
-            for i in range(entrystore.iter_n_children(iter)):
-                child = entrystore.iter_nth_child(iter, i)
+            for i in range(entrystore.iter_n_children(child_iter)):
+                child = entrystore.iter_nth_child(child_iter, i)
                 xhtml += self.__generate_entry(entrystore, child, depth)
 
             xhtml += "  </ul>\n"
             xhtml += "</div>\n"
 
-        elif type(e) == entry.FolderEntry:
-            xhtml += tabs + "<li class=\"folder\" id=\"%s\">\n" % e.path
+        elif isinstance(child_entry, entry.FolderEntry):
+            xhtml += tabs + "<li class=\"folder\" id=\"%s\">\n" % child_entry.path
             xhtml += tabs + "   <div class=\"folder-data\">\n"
-            xhtml += tabs + "       <h2>%s</h2>\n" % e.name
+            xhtml += tabs + "       <h2>%s</h2>\n" % child_entry.name
 
-            if e.description != "":
-                xhtml += tabs + "       <p class=\"description\">%s</p>\n" % e.description
+            if child_entry.description != "":
+                xhtml += tabs + "       <p class=\"description\">%s</p>\n" % child_entry.description
 
             xhtml += tabs + "   </div>\n"
             xhtml += tabs + "\n"
             xhtml += tabs + "   <ul>\n"
 
-            for i in range(entrystore.iter_n_children(iter)):
-                child = entrystore.iter_nth_child(iter, i)
+            for i in range(entrystore.iter_n_children(child_iter)):
+                child = entrystore.iter_nth_child(child_iter, i)
                 xhtml += self.__generate_entry(entrystore, child, depth + 2)
 
             xhtml += tabs + "   </ul>\n"
@@ -349,18 +349,18 @@ class XHTML(base.DataHandler):
 
         else:
 
-            xhtml += tabs + "<li class=\"account\" id=\"%s\">\n" % e.path
+            xhtml += tabs + "<li class=\"account\" id=\"%s\">\n" % child_entry.path
             xhtml += tabs + "   <div class=\"heading\">\n"
-            xhtml += tabs + "       <img src=\"%s/entry/%s.png\" alt=\"%s\" />\n" % (IMAGEPATH, e.id, e.typename)
-            xhtml += tabs + "       <h2>%s</h2>\n" % e.name
-            xhtml += tabs + "       <p class=\"description\"><span class=\"type\">%s</span>%s</p>\n" % (e.typename + (e.description != "" and "; " or ""), e.description)
+            xhtml += tabs + "       <img src=\"%s/entry/%s.png\" alt=\"%s\" />\n" % (IMAGEPATH, child_entry.id, child_entry.typename)
+            xhtml += tabs + "       <h2>%s</h2>\n" % child_entry.name
+            xhtml += tabs + "       <p class=\"description\"><span class=\"type\">%s</span>%s</p>\n" % (child_entry.typename + (child_entry.description != "" and "; " or ""), child_entry.description)
             xhtml += tabs + "   </div>\n"
             xhtml += tabs + "\n"
 
             xhtml += tabs + "   <div class=\"data\">\n"
 
             fields = []
-            for field in e.fields:
+            for field in child_entry.fields:
                 if field.value != "":
                     fields.append(field)
 
@@ -375,7 +375,7 @@ class XHTML(base.DataHandler):
 
                 xhtml += tabs + "       </table>\n"
 
-            xhtml += tabs + "       <p class=\"updated\">Updated " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.updated)) + "</p>\n"
+            xhtml += tabs + "       <p class=\"updated\">Updated " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(child_entry.updated)) + "</p>\n"
             xhtml += tabs + "   </div>\n"
             xhtml += tabs + "</li>\n"
             xhtml += tabs + "\n"
@@ -432,19 +432,19 @@ class XHTML(base.DataHandler):
 
         # find the entries
         entries = {}
-        iter = entrystore.iter_nth_child(None, 0)
+        child_iter = entrystore.iter_nth_child(None, 0)
 
-        while iter is not None:
-            e = entrystore.get_entry(iter)
-            e.path = self.__get_entryid(entrystore, iter)
+        while child_iter is not None:
+            child_entry = entrystore.get_entry(child_iter)
+            child_entry.path = self.__get_entryid(entrystore, child_iter)
 
-            if type(e) != entry.FolderEntry:
-                if type(e) not in entries:
-                    entries[type(e)] = []
+            if not isinstance(child_entry, entry.FolderEntry):
+                if type(child_entry) not in entries:
+                    entries[type(child_entry)] = []
 
-                entries[type(e)].append(e)
+                entries[type(child_entry)].append(child_entry)
 
-            iter = entrystore.iter_traverse_next(iter)
+            child_iter = entrystore.iter_traverse_next(child_iter)
 
         # generate the xhtml
         xhtml = ""
@@ -461,8 +461,8 @@ class XHTML(base.DataHandler):
 
             entrylist = entries[entrytype]
 
-            for e in entrylist:
-                xhtml += "      <li><a href=\"#%s\">%s</a></li>\n" % (str(e.path), e.name)
+            for child_entry in entrylist:
+                xhtml += "      <li><a href=\"#%s\">%s</a></li>\n" % (str(child_entry.path), child_entry.name)
 
             xhtml += "  </ul>\n"
             xhtml += "\n"
@@ -497,40 +497,40 @@ class XHTML(base.DataHandler):
         # fetch folder list
         folders = []
         for i in range(entrystore.iter_n_children(parent)):
-            iter = entrystore.iter_nth_child(parent, i)
-            e = entrystore.get_entry(iter)
-            e.path = self.__get_entryid(entrystore, iter)
-            e.iter = iter
+            child_iter = entrystore.iter_nth_child(parent, i)
+            child_entry = entrystore.get_entry(child_iter)
+            child_entry.path = self.__get_entryid(entrystore, child_iter)
+            child_entry.iter = child_iter
 
-            if type(e) == entry.FolderEntry:
-                folders.append(e)
+            if isinstance(child_entry, entry.FolderEntry):
+                folders.append(child_entry)
 
         # generate xhtml
         if len(folders) > 0:
             xhtml += tabs + "<ul>\n"
 
-            for e in folders:
-                childxhtml = self.__generate_sidebar_foldertree(entrystore, e.iter, depth + 1)
+            for child_entry in folders:
+                childxhtml = self.__generate_sidebar_foldertree(entrystore, child_entry.iter, depth + 1)
 
                 if childxhtml != "":
                     xhtml += tabs + "   <li>\n"
-                    xhtml += tabs + "       <a href=\"#%s\">%s</a>\n" % (str(e.path), e.name)
+                    xhtml += tabs + "       <a href=\"#%s\">%s</a>\n" % (str(child_entry.path), child_entry.name)
                     xhtml += childxhtml
                     xhtml += tabs + "   </li>\n"
 
                 else:
-                    xhtml += tabs + "   <li><a href=\"#%s\">%s</a></li>\n" % (str(e.path), e.name)
+                    xhtml += tabs + "   <li><a href=\"#%s\">%s</a></li>\n" % (str(child_entry.path), child_entry.name)
 
             xhtml += tabs + "</ul>\n"
 
         return xhtml
 
-    def __get_entryid(self, entrystore, iter):
+    def __get_entryid(self, entrystore, child_iter):
         "Returns an entry id for an iter"
 
         path = "entry-"
 
-        for i in entrystore.get_path(iter):
+        for i in entrystore.get_path(child_iter):
             path += str(i) + "-"
 
         path = path[:-1]
